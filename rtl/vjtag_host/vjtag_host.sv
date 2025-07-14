@@ -11,8 +11,8 @@
 // -------------------------------------------------------------------
 
 module vjtag_host #(
-    parameter AW = 8,
-    parameter DW = 8
+    parameter AW = 16,
+    parameter DW = 16
 )(
     input  logic           clk,
     input  logic           rst_n,
@@ -30,7 +30,7 @@ module vjtag_host #(
 );
 
     // Wires to connect VJTAG IP and control module
-    logic [1:0] ir_in, ir_out;
+    logic [7:0] ir_in, ir_out;
     logic       tck, tdi, tdo;
     logic       cdr, cir, e1dr, e2dr, pdr, sdr, udr, uir;
 

@@ -11,15 +11,15 @@
 // -------------------------------------------------------------------
 
 module vjtag_ctrl #(
-    parameter AW = 8,   // address width
-    parameter DW = 8    // data width
+    parameter AW = 16,   // address width
+    parameter DW = 16    // data width
 ) (
 
     // vjtag ip (on tck clock domain)
-    output logic [1:0]      ir_out,     // Virtual JTAG instruction register output.
+    output logic [7:0]      ir_out,     // Virtual JTAG instruction register output.
                                         // The value is captured whenever virtual_state_cir is high
     output logic            tdo,        // Writes to the TDO pin on the device
-    input  logic [1:0]      ir_in,      // Virtual JTAG instruction register data.
+    input  logic [7:0]      ir_in,      // Virtual JTAG instruction register data.
                                         // The value is available and latched when virtual_state_uir is high
     input  logic            tck,        // JTAG test clock
     input  logic            tdi,        // TDI input data on the device. Used when virtual_state_sdr is high
@@ -50,31 +50,32 @@ module vjtag_ctrl #(
 // Signal Declaration
 ///////////////////////////////////////
 
+localparam IRW = 8;                 // IR width
+localparam DRW = AW + DW;           // DR width
+
 // Commands
 localparam  CMD_READ  = 8'h1,
             CMD_WRITE = 8'h2,
-            CMD_RST_A = 8'hFE,  // reset assertion
-            CMD_RST_D = 8'hFF;  // reset de-assertion
+            CMD_RST_A = 8'hFE,      // reset assertion
+            CMD_RST_D = 8'hFF;      // reset de-assertion
 
 // -- tck domain signal --
 
 logic [1:0]     rst_n_dsync_tck;
-logic           rst_n_tck;  // synchronized rst_n to tck
-logic           is_cmd;
-logic           is_addr;
-logic           is_data;
-logic [7:0]     dr_cmd;
-logic [AW-1:0]  dr_addr;
-logic [DW-1:0]  dr_wdata;
-logic [DW-1:0]  dr_rdata;
+logic [DRW-1:0] dr;
+logic [DW-1:0]  rdata_tck;          // synchronized rdata on TCK domain
+
 
 // -- clk domain signal --
 
-logic           request;    // a pulse indicate a new request is received from vjtag
-logic           ready;
-logic [7:0]     cmd;
-logic [DW-1:0]  rdata_q;    // store read data
-logic           rrvalid_q;  // store read valid
+logic [1:0]     udr_dsync_sys;      // double synchronizer for udr to CLK domain
+logic           udr_sys;            // synchronized udr on CLK domain
+logic [IRW-1:0] ir_sys;             // synchronized ir on CLK domain
+logic [DRW-1:0] dr_sys;             // synchronized dr on CLK domain
+
+logic           udr_q_sys;          // delayed version of udr_sys
+logic           update;             // update the ir and dr on CLK domain
+logic           request;            // request to initiate bus request
 
 // bus request state machine
 localparam      IDLE = 0,
@@ -82,44 +83,48 @@ localparam      IDLE = 0,
                 READ = 2;
 
 logic [1:0]     state, state_next;
+
 logic           is_write;
 logic           is_read;
+logic [DW-1:0]  rdata_q;
 
 ///////////////////////////////////////
 // Main logic
 ///////////////////////////////////////
 
+// Implementation Note:
+// - IR holds the Bus command, and DR holds the remaining data (address, write data)
+// When Host send transaction through VJTAG to FPGA:
+// - ir_in contains the command.
+// - When the `sdr` signal is asserted, the remaining data are shifted into the **DR** via the `tdi` pin.
+// - When shifting is complete, `sdr` is de-asserted and `udr` is asserted.
+// - The `tck` signal toggles only during active data shifting. Once `udr` is asserted, `tck` remains idle until
+//   the next transaction begins. `udr` also remains asserted until the next transaction begins.
 
 // ------------------------------------
 //              TCK domain
 // ------------------------------------
 
-// synchronize rst_n to TCK domain
-always @(posedge tck) begin
-    rst_n_dsync_tck <= {rst_n_dsync_tck[0], rst_n};
-end
-assign rst_n_tck = rst_n_dsync_tck[1];
-
-// Decode the VIR
-assign is_cmd  = ir_in == 0;
-assign is_addr = ir_in == 1;
-assign is_data = ir_in == 2;
-
-// Data Register
+// Data Register (dr)
 always_ff @(posedge tck) begin
-    if (is_cmd  && sdr) dr_cmd <= {tdi, dr_cmd[7:1]};
-    if (is_addr && sdr) dr_cmd <= {tdi, dr_addr[AW-1:1]};
-    if (is_data && sdr) dr_cmd <= {tdi, dr_wdata[DW-1:1]};
+    if (cdr) dr <= {{AW{1'b0}}, rdata_q}; // rdata_q is in CLK domain but considered as quasi-static
+    if (sdr) dr <= {tdi, dr[DRW-1:1]};
 end
 
-// TDO - FIXME
-always_ff @(posedge tck) begin
-    if (sdr) tdo <= {dr_wdata[0]};
-end
+// tdo
+assign tdo = dr[0];
+
+// ir_out
+assign ir_out = ir_in;
 
 // ------------------------------------
 //              CLK domain
 // ------------------------------------
+
+always @(posedge clk) begin
+    if (!rst_n) request <= 1'b0;
+    else        request <= update;
+end
 
 // Bus request state machine
 always_ff @(posedge clk) begin
@@ -165,26 +170,24 @@ always_ff @(posedge clk) begin
     end
 end
 
+assign is_write = ir_sys == CMD_WRITE;
+assign is_read  = ir_sys == CMD_READ;
+assign wdata    = dr_sys[DW-1:0];
+assign address  = dr_sys[AW+DW-1:DW];
+
 // Handle read data
 always @(posedge clk) begin
-    if (!rst_n) rrvalid_q <= 1'b0;
-    else begin
-        rrvalid_q <= rvalid;
-        rdata_q <= rdata;
-    end
+    if (rrvalid) rdata_q <= rdata;
 end
 
-assign is_write = cmd == CMD_WRITE;
-assign is_read  = cmd == CMD_READ;
-assign ready = state == IDLE;
 
 // Handle Reset Command
 always @(posedge clk) begin
     if (!rst_n) rst_n_out <= 1'b1;
     else begin
         if (request) begin
-            if      (cmd == CMD_RST_A) rst_n_out <= 1'b0;
-            else if (cmd == CMD_RST_D) rst_n_out <= 1'b1;
+            if      (ir_sys == CMD_RST_A) rst_n_out <= 1'b0;
+            else if (ir_sys == CMD_RST_D) rst_n_out <= 1'b1;
         end
     end
 end
@@ -193,36 +196,33 @@ end
 //              CDC Logic
 // ------------------------------------
 
-// synchronize the request from tck to clk when udr is asserted
-// Note:
+// -- TCK -> CLK --
 
-vjtag_cdc #(.WIDTH(8+AW+DW))
-u_vjtag_clk_tck2clk(
-    .clka           (tck),
-    .rst_n_clka     (rst_n_tck),
-    .req_clka       (udr),
-    .payload_clka   ({dr_cmd, dr_addr, dr_wdata}),
-    .clkb           (clk),
-    .rst_n_clkb     (rst_n),
-    .ready_clkb     (ready),
-    .valid_clkb     (request),
-    .payload_clkb   ({cmd, address, wdata})
-);
+// synchronize udr
+always @(posedge clk) begin
+    if (!rst_n) udr_dsync_sys <= 2'b0;
+    else        udr_dsync_sys <= {udr_dsync_sys[0], udr};
+end
+assign udr_sys = udr_dsync_sys[1];
 
-// synchronize the read data from clk to tck
-// This does not work because the tck will stop . TBD
-vjtag_cdc #(.WIDTH(DW))
-u_vjtag_clk_clk2tck(
-    .clka           (clk),
-    .rst_n_clka     (rst_n),
-    .req_clka       (rrvalid_q),
-    .payload_clka   (rdata_q),
-    .clkb           (tck),
-    .rst_n_clkb     (rst_n_tck),
-    .ready_clkb     (1'b1),
-    .valid_clkb     (),
-    .payload_clkb   (dr_rdata)
-);
+// create a pulse from udr
+always @(posedge clk) begin
+    if (!rst_n) udr_q_sys <= 1'b0;
+    else        udr_q_sys <= udr_sys;
+end
+assign update = udr_sys & ~udr_q_sys;
 
+// use the udr pulse as a qualifier to capture ir and dr to CLK domain
+always @(posedge clk) begin
+    if (update) begin
+        ir_sys <= ir_in;
+        dr_sys <= dr;
+    end
+end
+
+// -- CLK -> TCK --
+// TCK is usually running slower then CLK.
+// When VJTAG issue command to read the data back, the read data should already been captured in rdata_q register.
+// We can consider rdata_q as quasi-static hence no need to synchronize it from CLK to TCK
 
 endmodule

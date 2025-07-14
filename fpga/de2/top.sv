@@ -17,6 +17,7 @@ module top
     input         KEY,         // Used as RESET, low active
 
     output [15:0] LEDR,
+    output [3:0]  LEDG,
     input  [15:0] SW
 );
 
@@ -41,16 +42,18 @@ module top
         end
         else begin
             switch <= SW;
-            //if (!rst_n_out) led <= 0;
-            if (wvalid && address == 4) led <= wdata;
+            if (!rst_n_out) led <= 0;
+            else if (wvalid && address == 4) led <= wdata;
             rrvalid <= rvalid;
         end
     end
 
     assign LEDR = led;
-
     assign rready = 1;
     assign wready = 1;
+
+    assign LEDG[0] = rst_n_out;
+    assign LEDG[1] = ~rst_n_out;
 
     vjtag_host #(.AW(16), .DW(16))
     u_host (

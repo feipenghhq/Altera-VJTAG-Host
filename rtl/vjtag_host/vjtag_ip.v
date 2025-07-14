@@ -51,9 +51,9 @@ module vjtag_ip (
 	virtual_state_udr,
 	virtual_state_uir);
 
-	input	[1:0]  ir_out;
+	input	[7:0]  ir_out;
 	input	  tdo;
-	output	[1:0]  ir_in;
+	output	[7:0]  ir_in;
 	output	  tck;
 	output	  tdi;
 	output	  virtual_state_cdr;
@@ -67,7 +67,7 @@ module vjtag_ip (
 
 	wire  sub_wire0;
 	wire  sub_wire1;
-	wire [1:0] sub_wire2;
+	wire [7:0] sub_wire2;
 	wire  sub_wire3;
 	wire  sub_wire4;
 	wire  sub_wire5;
@@ -78,7 +78,7 @@ module vjtag_ip (
 	wire  sub_wire10;
 	wire  virtual_state_cir = sub_wire0;
 	wire  virtual_state_pdr = sub_wire1;
-	wire [1:0] ir_in = sub_wire2[1:0];
+	wire [7:0] ir_in = sub_wire2[7:0];
 	wire  tdi = sub_wire3;
 	wire  virtual_state_udr = sub_wire4;
 	wire  tck = sub_wire5;
@@ -126,10 +126,10 @@ module vjtag_ip (
 	defparam
 		sld_virtual_jtag_component.sld_auto_instance_index = "YES",
 		sld_virtual_jtag_component.sld_instance_index = 0,
-		sld_virtual_jtag_component.sld_ir_width = 2,
-		sld_virtual_jtag_component.sld_sim_action = "((1,1,0,2),(1,2,FE,8),(1,2,FF,8),(1,2,02,8),(1,1,01,2),(1,2,beef,10),(1,1,2,2),(1,2,cafe,10))",
-		sld_virtual_jtag_component.sld_sim_n_scan = 8,
-		sld_virtual_jtag_component.sld_sim_total_length = 62;
+		sld_virtual_jtag_component.sld_ir_width = 8,
+		sld_virtual_jtag_component.sld_sim_action = "((1,1,FE,8),(1,2,0,1),(1,1,FF,8),(1,2,0,1),(1,1,02,8),(1,2,beefcafe,20))",
+		sld_virtual_jtag_component.sld_sim_n_scan = 6,
+		sld_virtual_jtag_component.sld_sim_total_length = 58;
 
 
 endmodule
@@ -142,12 +142,12 @@ endmodule
 // Retrieval info: LIBRARY: altera_mf altera_mf.altera_mf_components.all
 // Retrieval info: CONSTANT: SLD_AUTO_INSTANCE_INDEX STRING "YES"
 // Retrieval info: CONSTANT: SLD_INSTANCE_INDEX NUMERIC "0"
-// Retrieval info: CONSTANT: SLD_IR_WIDTH NUMERIC "2"
-// Retrieval info: CONSTANT: SLD_SIM_ACTION STRING "((1,1,0,2),(1,2,FE,8),(1,2,FF,8),(1,2,02,8),(1,1,01,2),(1,2,beef,10),(1,1,2,2),(1,2,cafe,10))"
-// Retrieval info: CONSTANT: SLD_SIM_N_SCAN NUMERIC "8"
-// Retrieval info: CONSTANT: SLD_SIM_TOTAL_LENGTH NUMERIC "62"
-// Retrieval info: USED_PORT: ir_in 0 0 2 0 OUTPUT NODEFVAL "ir_in[1..0]"
-// Retrieval info: USED_PORT: ir_out 0 0 2 0 INPUT NODEFVAL "ir_out[1..0]"
+// Retrieval info: CONSTANT: SLD_IR_WIDTH NUMERIC "8"
+// Retrieval info: CONSTANT: SLD_SIM_ACTION STRING "((1,1,FE,8),(1,2,0,1),(1,1,FF,8),(1,2,0,1),(1,1,02,8),(1,2,beefcafe,20))"
+// Retrieval info: CONSTANT: SLD_SIM_N_SCAN NUMERIC "6"
+// Retrieval info: CONSTANT: SLD_SIM_TOTAL_LENGTH NUMERIC "58"
+// Retrieval info: USED_PORT: ir_in 0 0 8 0 OUTPUT NODEFVAL "ir_in[7..0]"
+// Retrieval info: USED_PORT: ir_out 0 0 8 0 INPUT NODEFVAL "ir_out[7..0]"
 // Retrieval info: USED_PORT: tck 0 0 0 0 OUTPUT NODEFVAL "tck"
 // Retrieval info: USED_PORT: tdi 0 0 0 0 OUTPUT NODEFVAL "tdi"
 // Retrieval info: USED_PORT: tdo 0 0 0 0 INPUT NODEFVAL "tdo"
@@ -159,9 +159,9 @@ endmodule
 // Retrieval info: USED_PORT: virtual_state_sdr 0 0 0 0 OUTPUT NODEFVAL "virtual_state_sdr"
 // Retrieval info: USED_PORT: virtual_state_udr 0 0 0 0 OUTPUT NODEFVAL "virtual_state_udr"
 // Retrieval info: USED_PORT: virtual_state_uir 0 0 0 0 OUTPUT NODEFVAL "virtual_state_uir"
-// Retrieval info: CONNECT: @ir_out 0 0 2 0 ir_out 0 0 2 0
+// Retrieval info: CONNECT: @ir_out 0 0 8 0 ir_out 0 0 8 0
 // Retrieval info: CONNECT: @tdo 0 0 0 0 tdo 0 0 0 0
-// Retrieval info: CONNECT: ir_in 0 0 2 0 @ir_in 0 0 2 0
+// Retrieval info: CONNECT: ir_in 0 0 8 0 @ir_in 0 0 8 0
 // Retrieval info: CONNECT: tck 0 0 0 0 @tck 0 0 0 0
 // Retrieval info: CONNECT: tdi 0 0 0 0 @tdi 0 0 0 0
 // Retrieval info: CONNECT: virtual_state_cdr 0 0 0 0 @virtual_state_cdr 0 0 0 0

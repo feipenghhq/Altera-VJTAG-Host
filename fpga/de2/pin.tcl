@@ -22,6 +22,11 @@ set_location_assignment PIN_AE15 -to LEDR[13]
 set_location_assignment PIN_AF13 -to LEDR[14]
 set_location_assignment PIN_AE13 -to LEDR[15]
 
+# LEDG
+set_location_assignment PIN_AE22 -to LEDG[0]
+set_location_assignment PIN_AF22 -to LEDG[1]
+set_location_assignment PIN_W19 -to LEDG[2]
+set_location_assignment PIN_V18 -to LEDG[3]
 
 # SW
 set_location_assignment PIN_N25 -to SW[0]
