@@ -127,9 +127,9 @@ module vjtag_ip (
 		sld_virtual_jtag_component.sld_auto_instance_index = "YES",
 		sld_virtual_jtag_component.sld_instance_index = 0,
 		sld_virtual_jtag_component.sld_ir_width = 8,
-		sld_virtual_jtag_component.sld_sim_action = "((1,1,FE,8),(1,2,0,1),(1,1,FF,8),(1,2,0,1),(1,1,02,8),(1,2,beefcafe,20))",
-		sld_virtual_jtag_component.sld_sim_n_scan = 6,
-		sld_virtual_jtag_component.sld_sim_total_length = 58;
+		sld_virtual_jtag_component.sld_sim_action = "((1,1,FE,8),(1,2,0,1),(1,1,FF,8),(1,2,0,1),(1,1,02,8),(1,2,beefcafe,20),(1,1,01,8),(0,2,12345678,20),(0,1,0,8),(0,2,0,10))",
+		sld_virtual_jtag_component.sld_sim_n_scan = 10,
+		sld_virtual_jtag_component.sld_sim_total_length = 122;
 
 
 endmodule
@@ -143,9 +143,9 @@ endmodule
 // Retrieval info: CONSTANT: SLD_AUTO_INSTANCE_INDEX STRING "YES"
 // Retrieval info: CONSTANT: SLD_INSTANCE_INDEX NUMERIC "0"
 // Retrieval info: CONSTANT: SLD_IR_WIDTH NUMERIC "8"
-// Retrieval info: CONSTANT: SLD_SIM_ACTION STRING "((1,1,FE,8),(1,2,0,1),(1,1,FF,8),(1,2,0,1),(1,1,02,8),(1,2,beefcafe,20))"
-// Retrieval info: CONSTANT: SLD_SIM_N_SCAN NUMERIC "6"
-// Retrieval info: CONSTANT: SLD_SIM_TOTAL_LENGTH NUMERIC "58"
+// Retrieval info: CONSTANT: SLD_SIM_ACTION STRING "((1,1,FE,8),(1,2,0,1),(1,1,FF,8),(1,2,0,1),(1,1,02,8),(1,2,beefcafe,20),(1,1,01,8),(0,2,12345678,20),(0,1,0,8),(0,2,0,10))"
+// Retrieval info: CONSTANT: SLD_SIM_N_SCAN NUMERIC "10"
+// Retrieval info: CONSTANT: SLD_SIM_TOTAL_LENGTH NUMERIC "122"
 // Retrieval info: USED_PORT: ir_in 0 0 8 0 OUTPUT NODEFVAL "ir_in[7..0]"
 // Retrieval info: USED_PORT: ir_out 0 0 8 0 INPUT NODEFVAL "ir_out[7..0]"
 // Retrieval info: USED_PORT: tck 0 0 0 0 OUTPUT NODEFVAL "tck"

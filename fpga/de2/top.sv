@@ -42,9 +42,10 @@ module top
         end
         else begin
             switch <= SW;
+            rrvalid <= 1'b0;
             if (!rst_n_out) led <= 0;
             else if (wvalid && address == 4) led <= wdata;
-            rrvalid <= rvalid;
+            if (rvalid && address == 8) rrvalid <= rvalid;
         end
     end
 
