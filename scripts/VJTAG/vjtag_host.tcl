@@ -12,27 +12,66 @@
 
 set Usage {
 ------------------------------------------------------------------------------------------------------------------------
-Script to use Altera VJTAG to communicate with the target FPGA from the host machine.
-Provide a interactive shell to interact with the target FPGA chip.
+VJTAG_HOST(1)                 Altera VJTAG Utility                VJTAG_HOST(1)
 
-Usage:
-  quartus_stp -t vjtag_host.tcl
+NAME
+       vjtag_host.tcl - Interactive shell to communicate with Altera VJTAG interface on target FPGA
 
-Supported commands:
-  help                   # print help message
-  exit                   # exit the command
-  read    <addr>         # read date at <address>
-  write   <addr> <data>  # write <data> to <address>
-  program <addr> <file>  # program a RAM or continuous memory space starting at <address> using content
-                         # in the <file>. the address of the subsequence data will be calculated automatically
+SYNOPSIS
+       quartus_stp -t vjtag_host.tcl
+       quartus_stp -t vjtag_host.tcl [program] [addr]
 
-Config file:
-  A config file is used to provide information about the target device for the script.
+DESCRIPTION
+       This Tcl script communicates with the target FPGA using Altera's VJTAG
+       interface. It provides an interactive shell for debugging, memory
+       access, and programming memory via virtual JTAG.
 
-  instance_id: 0         # The VJTAG instance ID.
-                         # Can be found in synthesis report by searching for parameter 'sld_instance_index'
-  addr_width: 16         # number of addr byte
-  data_width: 16         # number of data byt
+       If a file is provided, it will be programmed into the FPGA starting at
+       the given address. If no address is specified, address 0 is used.
+
+USAGE
+       quartus_stp -t vjtag_host.tcl
+              Start an interactive shell.
+
+       quartus_stp -t vjtag_host.tcl file.hex [addr]
+              Program the file to FPGA RAM starting at optional addr (default is 0).
+
+SUPPORTED COMMANDS IN INTERACTIVE SHELL
+       help
+              Print help message.
+
+       exit
+              Exit the command shell.
+
+       read <addr>
+              Read data at the specified <addr>.
+
+       write <addr> <data>
+              Write <data> to the specified <addr>.
+
+       program <addr> <file>
+              Program a RAM or continuous memory space starting at <addr> using the
+              contents of <file>. The address of subsequent data is automatically
+              calculated.
+
+CONFIG FILE
+       The script uses a configuration file to define FPGA target parameters:
+
+       instance_id
+              The VJTAG instance ID. Found in the Quartus synthesis report by searching
+              for parameter sld_instance_index (e.g., instance_id: 0).
+
+       addr_width
+              Number of address bits (e.g., 16).
+
+       data_width
+              Number of data bits (e.g., 16).
+
+AUTHOR
+       Heqing Huang
+
+SEE ALSO
+       quartus_stp(1), jtag(1)
 
 ------------------------------------------------------------------------------------------------------------------------
 }
@@ -252,7 +291,20 @@ proc interpreter {} {
 #------------------------------------------------
 proc main {} {
     read_config
-    interpreter
+    if {$::argc == 0} {
+        interpreter
+    } else {
+        if {$::argc == 1} {
+            set file [lindex $::argv 0]
+            set addr 0
+        } elseif {$::argc == 2} {
+            set file [lindex $::argv 0]
+            set addr [lindex $::argv 1]
+        }
+        setup_blaster
+        process_program $addr $file
+        process_exit
+    }
 }
 
 main
