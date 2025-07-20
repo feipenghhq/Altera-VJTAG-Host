@@ -210,7 +210,7 @@ proc process_write {addr data} {
     scan $addr %i addr
     scan $data %i data
     set length [expr $addr_width + $data_width]
-    set word [expr {($addr << $addr_width) | $data}]
+    set word [expr {($addr << $data_width) | $data}]
     set word [format "%0*X" [expr $length / 4] $word]
     cmd_write $word $length
     device_unlock
@@ -222,11 +222,11 @@ proc process_read {addr} {
     global data_width
     scan $addr %i addr
     set addr [format "%0*X" [expr $addr_width / 4] $addr]
-    set dummy [format "%0*X" [expr $addr_width / 4] 0]
+    set dummy [format "%0*X" [expr $data_width / 4] 0]
     set data [cmd_read $addr $addr_width $dummy $data_width]
     device_unlock
     puts "Received $data"
-    return data
+    return $data
 }
 
 proc process_program {addr file} {
