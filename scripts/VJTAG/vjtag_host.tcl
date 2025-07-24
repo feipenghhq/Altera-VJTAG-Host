@@ -88,6 +88,15 @@ set device ""
 set instance_id 0
 set addr_width 0
 set data_width 0
+set print_read_data 0
+
+#--------------------------------------
+# Helper Procedure
+#--------------------------------------
+
+proc ceil_div {a b} {
+    return [expr {($a + $b - 1) / $b}]
+}
 
 #--------------------------------------
 # Procedure to interact with VJTAG
@@ -211,21 +220,24 @@ proc process_write {addr data} {
     scan $data %i data
     set length [expr $addr_width + $data_width]
     set word [expr {($addr << $data_width) | $data}]
-    set word [format "%0*X" [expr $length / 4] $word]
+    set word [format "%0*X" [ceil_div $length 4] $word]
     cmd_write $word $length
     device_unlock
 }
 
 proc process_read {addr} {
-    device_lock -timeout 10000
+    global print_read_data
     global addr_width
     global data_width
+    device_lock -timeout 10000
     scan $addr %i addr
-    set addr [format "%0*X" [expr $addr_width / 4] $addr]
-    set dummy [format "%0*X" [expr $data_width / 4] 0]
+    set addr [format "%0*X" [ceil_div $addr_width 4] $addr]
+    set dummy [format "%0*X" [ceil_div $data_width 4] 0]
     set data [cmd_read $addr $addr_width $dummy $data_width]
     device_unlock
-    puts "Received $data"
+    if {$print_read_data} {
+        puts "Received $data"
+    }
     return $data
 }
 
@@ -249,11 +261,11 @@ proc process_program {addr file} {
         scan $data %i data
         set length [expr $addr_width + $data_width]
         set word [expr {($addr << $addr_width) | $data}]
-        set word [format "%0*X" [expr $length / 4] $word]
+        set word [format "%0*X" [ceil_div $length 4] $word]
         cmd_write $word $length
 
         # advance the address
-        set addr [expr $addr + [expr $addr_width/8]]
+        set addr [expr $addr + [ceil_div $addr_width 8]]
     }
 
     puts "De-assert reset"
@@ -307,21 +319,7 @@ proc main {} {
     }
 }
 
-main
-
-#------------------------------------------------
-# Sanity Check
-#------------------------------------------------
-
-proc sanity_check {} {
-    setup_blaster
-    device_lock -timeout 10000
-    cmd_rst_assert
-    cmd_rst_deassert
-    cmd_write 00040001 32
-    cmd_write 0004FF11 32
-    set result [cmd_read 0008 16 0000 16]
-    puts "$result"
-    device_unlock
-    close
+if {[info script] eq $::argv0} {
+    set print_read_data 1
+    main
 }

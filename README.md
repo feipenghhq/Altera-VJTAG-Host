@@ -122,6 +122,10 @@ to synchronize the transaction into the main clk domain. A state machine then ha
 | `IDLE` | `READ` | `request && rvalid && rready`                              | Read request accepted. Proceed to wait for read response.        |
 | `READ` | `IDLE` | `rrvalid`                                                  | Received read data, go back to `IDLE` state                      |
 
+#### ❗Limitation
+
+The VJTAG interface does not support backpressure. If the bus is busy and unable to accept a request, it must become ready and accept the request before the next request from VJTAG interface arrives.
+
 #### Read data
 
 To access read data from the FPGA via the VJTAG interface:

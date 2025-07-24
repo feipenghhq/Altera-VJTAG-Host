@@ -30,7 +30,7 @@ fi
 
 # If no arguments, launch interactive shell
 if [ $# -eq 0 ]; then
-    quartus_stp -t "$TCL_SCRIPT"
+    quartus_stp --64bit -t "$TCL_SCRIPT"
     exit $?
 fi
 
@@ -38,7 +38,7 @@ fi
 if [ $# -eq 1 ] || [ $# -eq 2 ]; then
     FILE="$1"
     ADDR="${2:-0}"
-    quartus_stp -t "$TCL_SCRIPT" "$FILE" "$ADDR"
+    quartus_stp --64bit -t "$TCL_SCRIPT" "$FILE" "$ADDR"
     exit $?
 fi
 

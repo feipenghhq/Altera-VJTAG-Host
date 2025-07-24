@@ -29,6 +29,8 @@ async def init(dut, period = 100):
     """
     Initialize the environment: setup clock, load the hack rom and reset the design
     """
+    dut.rready.value = 1
+    dut.wready.value = 1
     # start clock
     cocotb.start_soon(Clock(dut.clk, period, units = 'ns').start()) # clock
     # generate reset
