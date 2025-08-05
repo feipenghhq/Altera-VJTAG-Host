@@ -11,39 +11,39 @@
 // -------------------------------------------------------------------
 
 module vjtag_ctrl #(
-    parameter AW = 16,   // address width
-    parameter DW = 16    // data width
+    parameter ADDR_WIDTH = 16,   // address width
+    parameter DATA_WIDTH = 16    // data width
 ) (
 
     // vjtag ip (on tck clock domain)
-    output logic [7:0]      ir_out,     // Virtual JTAG instruction register output.
-                                        // The value is captured whenever virtual_state_cir is high
-    output logic            tdo,        // Writes to the TDO pin on the device
-    input  logic [7:0]      ir_in,      // Virtual JTAG instruction register data.
-                                        // The value is available and latched when virtual_state_uir is high
-    input  logic            tck,        // JTAG test clock
-    input  logic            tdi,        // TDI input data on the device. Used when virtual_state_sdr is high
-    input  logic            cdr,        // virtual JTAG is in Capture_DR state
-    input  logic            cir,        // virtual JTAG is in Capture_IR state
-    input  logic            e1dr,       // virtual JTAG is in Exit1_DR state
-    input  logic            e2dr,       // virtual JTAG is in Exit2_DR state
-    input  logic            pdr,        // virtual JTAG is in Pause_DR state
-    input  logic            sdr,        // virtual JTAG is in Shift_DR state
-    input  logic            udr,        // virtual JTAG is in Update_DR state
-    input  logic            uir,        // virtual JTAG is in Update_IR state
+    output logic [7:0]              ir_out,     // Virtual JTAG instruction register output.
+                                                // The value is captured whenever virtual_state_cir is high
+    output logic                    tdo,        // Writes to the TDO pin on the device
+    input  logic [7:0]              ir_in,      // Virtual JTAG instruction register data.
+                                                // The value is available and latched when virtual_state_uir is high
+    input  logic                    tck,        // JTAG test clock
+    input  logic                    tdi,        // TDI input data on the device. Used when virtual_state_sdr is high
+    input  logic                    cdr,        // virtual JTAG is in Capture_DR state
+    input  logic                    cir,        // virtual JTAG is in Capture_IR state
+    input  logic                    e1dr,       // virtual JTAG is in Exit1_DR state
+    input  logic                    e2dr,       // virtual JTAG is in Exit2_DR state
+    input  logic                    pdr,        // virtual JTAG is in Pause_DR state
+    input  logic                    sdr,        // virtual JTAG is in Shift_DR state
+    input  logic                    udr,        // virtual JTAG is in Update_DR state
+    input  logic                    uir,        // virtual JTAG is in Update_IR state
 
     // system bus (on clk clock domain)
-    input  logic            clk,
-    input  logic            rst_n,
-    output logic            rst_n_out,  // reset output
-    output logic [AW-1:0]   address,    // address
-    output logic            wvalid,     // write request
-    output logic [DW-1:0]   wdata,      // write data
-    input  logic            wready,     // write ready
-    output logic            rvalid,     // read request
-    input  logic            rready,     // read ready
-    input  logic            rrvalid,    // read response valid
-    input  logic [DW-1:0]   rdata       // read data
+    input  logic                    clk,
+    input  logic                    rst_n,
+    output logic                    rst_n_out,  // reset output
+    output logic [ADDR_WIDTH-1:0]   address,    // address
+    output logic                    wvalid,     // write request
+    output logic                    rvalid,     // read request
+    output logic [DATA_WIDTH-1:0]   wdata,      // write data
+    input  logic                    ready,      // ready
+
+    input  logic                    rsp_valid,  // read response valid
+    input  logic [DATA_WIDTH-1:0]   rsp_data    // read data
 );
 
 ///////////////////////////////////////
@@ -51,7 +51,7 @@ module vjtag_ctrl #(
 ///////////////////////////////////////
 
 localparam IRW = 8;                 // IR width
-localparam DRW = AW + DW;           // DR width
+localparam DRW = ADDR_WIDTH + DATA_WIDTH;           // DR width
 
 // Commands
 localparam  CMD_READ  = 8'h1,
@@ -61,9 +61,9 @@ localparam  CMD_READ  = 8'h1,
 
 // -- tck domain signal --
 
-logic [1:0]     rst_n_dsync_tck;
-logic [DRW-1:0] dr;
-logic [DW-1:0]  rdata_tck;          // synchronized rdata on TCK domain
+logic [1:0]             rst_n_dsync_tck;
+logic [DRW-1:0]         dr;
+logic [DATA_WIDTH-1:0]  rsp_data_tck;          // synchronized rsp_data on TCK domain
 
 
 // -- clk domain signal --
@@ -78,15 +78,17 @@ logic           update;             // update the ir and dr on CLK domain
 logic           request;            // request to initiate bus request
 
 // bus request state machine
-localparam      IDLE = 0,
-                REQ  = 1,
-                READ = 2;
+typedef enum logic [1:0] {
+    IDLE,
+    REQ,
+    READ
+} state_t;
 
-logic [1:0]     state, state_next;
+state_t state, state_next;
 
-logic           is_write;
-logic           is_read;
-logic [DW-1:0]  rdata_q;
+logic                   is_write;
+logic                   is_read;
+logic [DATA_WIDTH-1:0]  rsp_data_q;
 
 ///////////////////////////////////////
 // Main logic
@@ -107,7 +109,7 @@ logic [DW-1:0]  rdata_q;
 
 // Data Register (dr)
 always_ff @(posedge tck) begin
-    if (cdr) dr <= {{AW{1'b0}}, rdata_q}; // rdata_q is in CLK domain but considered as quasi-static
+    if (cdr) dr <= {{ADDR_WIDTH{1'b0}}, rsp_data_q}; // rsp_data_q is in CLK domain but considered as quasi-static
     if (sdr) dr <= {tdi, dr[DRW-1:1]};
 end
 
@@ -137,16 +139,16 @@ always_comb begin
     case(state)
         IDLE: begin
             if (request) begin
-                if      (is_write) state_next = wready ? IDLE : REQ;
-                else if (is_read)  state_next = rready ? READ : REQ;
+                if      (is_write) state_next = state_t'(ready ? IDLE : REQ);
+                else if (is_read)  state_next = state_t'(ready ? READ : REQ);
             end
         end
         REQ: begin
-            if      (wvalid && wready) state_next = IDLE;
-            else if (rvalid && rready) state_next = READ;
+            if      (wvalid && ready) state_next = IDLE;
+            else if (rvalid && ready) state_next = READ;
         end
         READ: begin
-            if (rrvalid) state_next = IDLE;
+            if (rsp_valid) state_next = IDLE;
         end
     endcase
 end
@@ -176,12 +178,12 @@ end
 
 assign is_write = ir_sys == CMD_WRITE;
 assign is_read  = ir_sys == CMD_READ;
-assign wdata    = dr_sys[DW-1:0];
-assign address  = dr_sys[AW+DW-1:DW];
+assign wdata    = dr_sys[DATA_WIDTH-1:0];
+assign address  = dr_sys[ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH];
 
 // Handle read data
 always @(posedge clk) begin
-    if (rrvalid) rdata_q <= rdata;
+    if (rsp_valid) rsp_data_q <= rsp_data;
 end
 
 
@@ -226,7 +228,7 @@ end
 
 // -- CLK -> TCK --
 // TCK is usually running slower then CLK.
-// When VJTAG issue command to read the data back, the read data should already been captured in rdata_q register.
-// We can consider rdata_q as quasi-static hence no need to synchronize it from CLK to TCK
+// When VJTAG issue command to read the data back, the read data should already been captured in rsp_data_q register.
+// We can consider rsp_data_q as quasi-static hence no need to synchronize it from CLK to TCK
 
 endmodule

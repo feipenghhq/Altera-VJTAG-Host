@@ -17,7 +17,7 @@ VERILOG_SOURCES += $(QUARTUS_PATH)/eda/sim_lib/altera_mf.v
 #VERILOG_INCLUDE_DIRS +=
 
 # TOPLEVEL is the name of the toplevel module in your Verilog or VHDL file
-TOPLEVEL = vjtag_host
+TOPLEVEL = vjtag2wb
 
 # MODULE is the basename of the Python test file
 MODULE = test
