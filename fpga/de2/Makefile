@@ -11,8 +11,11 @@ PROJECT ?= vjtag_host
 # top level name
 TOP ?= top
 # verilog source files
-VERILOG += $(shell find $(GIT_ROOT)/rtl -name "*.sv")
-VERILOG += $(shell find $(GIT_ROOT)/rtl -name "*.v")
+VERILOG += $(GIT_ROOT)/rtl/vjtag/vjtag_ctrl.sv
+VERILOG += $(GIT_ROOT)/rtl/vjtag/vjtag_ip.v
+VERILOG += $(GIT_ROOT)/rtl/vjtag/vjtag2wb.sv
+VERILOG += $(GIT_ROOT)/rtl/fpga_examples/fpga_vjtag2gpio.sv
+VERILOG += $(GIT_ROOT)/rtl/fpga_examples/wbgpio.sv
 VERILOG += $(GIT_ROOT)/fpga/de2/top.sv
 # verilog include directory
 SEARCH ?=
