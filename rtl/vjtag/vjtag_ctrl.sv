@@ -36,14 +36,14 @@ module vjtag_ctrl #(
     input  logic                    clk,
     input  logic                    rst_n,
     output logic                    rst_n_out,  // reset output
-    output logic [ADDR_WIDTH-1:0]   address,    // address
-    output logic                    wvalid,     // write request
-    output logic                    rvalid,     // read request
-    output logic [DATA_WIDTH-1:0]   wdata,      // write data
-    input  logic                    ready,      // ready
+    output logic                    req_valid,  // request valid
+    output logic [ADDR_WIDTH-1:0]   req_addr,   // address, aligned to BYTE
+    output logic                    req_write,  // 0: read request, 1: write request
+    output logic [DATA_WIDTH-1:0]   req_wdata,  // write data
+    input  logic                    req_ready,  // ready
 
     input  logic                    rsp_valid,  // read response valid
-    input  logic [DATA_WIDTH-1:0]   rsp_data    // read data
+    input  logic [DATA_WIDTH-1:0]   rsp_rdata   // read data
 );
 
 ///////////////////////////////////////
@@ -139,13 +139,13 @@ always_comb begin
     case(state)
         IDLE: begin
             if (request) begin
-                if      (is_write) state_next = state_t'(ready ? IDLE : REQ);
-                else if (is_read)  state_next = state_t'(ready ? READ : REQ);
+                if (!req_ready) state_next = state_t'(REQ);
+                else if (is_read) state_next = state_t'(READ);
             end
         end
         REQ: begin
-            if      (wvalid && ready) state_next = IDLE;
-            else if (rvalid && ready) state_next = READ;
+            if      (req_valid &&  req_write && req_ready) state_next = IDLE;
+            else if (req_valid && !req_write && req_ready) state_next = READ;
         end
         READ: begin
             if (rsp_valid) state_next = IDLE;
@@ -155,35 +155,40 @@ end
 
 always_ff @(posedge clk) begin
     if (!rst_n) begin
-        wvalid <= 1'b0;
-        rvalid <= 1'b0;
+        req_valid <= 1'b0;
+        req_write   <= 1'b0;
     end
     else begin
+        req_valid <= 1'b0;
+        req_write   <= 1'b0;
         // Note: use next state here
         case(state_next)
             IDLE: begin
-                wvalid <= request & is_write;
-                rvalid <= request & is_read;
+                req_valid <= request & (is_write | is_read);
+                req_write <= request & is_write;
             end
             REQ: begin
-                wvalid <= is_write;
-                rvalid <= is_read;
+                req_valid <= 1'b1;
+                req_write <= is_write;
             end
             READ: begin
-                if (state != READ) rvalid <= is_read;
+                if (state != READ) begin // entering READ state
+                    req_valid <= 1'b1;
+                    req_write   <= 1'b0;
+                end
             end
         endcase
     end
 end
 
-assign is_write = ir_sys == CMD_WRITE;
-assign is_read  = ir_sys == CMD_READ;
-assign wdata    = dr_sys[DATA_WIDTH-1:0];
-assign address  = dr_sys[ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH];
+assign is_write  = ir_sys == CMD_WRITE;
+assign is_read   = ir_sys == CMD_READ;
+assign req_wdata = dr_sys[DATA_WIDTH-1:0];
+assign req_addr  = dr_sys[ADDR_WIDTH+DATA_WIDTH-1:DATA_WIDTH];
 
 // Handle read data
 always @(posedge clk) begin
-    if (rsp_valid) rsp_data_q <= rsp_data;
+    if (rsp_valid) rsp_data_q <= rsp_rdata;
 end
 
 

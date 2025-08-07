@@ -35,28 +35,31 @@ module vjtag2wb #(
     input  logic                    wb_stall_i
 );
 
+    // FIXME:
+
     logic [7:0] ir_in, ir_out;
     logic       tck, tdi, tdo;
     logic       cdr, cir, e1dr, e2dr, pdr, sdr, udr, uir;
 
-    logic [ADDR_WIDTH-1:0]   address;
-    logic                    rvalid;
-    logic                    wvalid;
-    logic [DATA_WIDTH-1:0]   wdata;
-    logic                    ready;
+    logic                    req_valid;
+    logic                    req_write;
+    logic [ADDR_WIDTH-1:0]   req_addr;
+    logic [DATA_WIDTH-1:0]   req_wdata;
+    logic                    req_ready;
+
     logic                    rsp_valid;
-    logic [DATA_WIDTH-1:0]   rsp_data;
+    logic [DATA_WIDTH-1:0]   rsp_rdata;
 
     logic wb_cyc_hold;
 
-    assign wb_cyc_o = wvalid | rvalid | wb_cyc_hold;
-    assign wb_stb_o = wvalid | rvalid;
-    assign wb_adr_o = address;
-    assign wb_dat_o = wdata;
-    assign wb_we_o  = wvalid;
+    assign wb_cyc_o = req_valid | wb_cyc_hold;
+    assign wb_stb_o = req_valid;
+    assign wb_adr_o = req_addr;
+    assign wb_dat_o = req_wdata;
+    assign wb_we_o  = req_write;
 
-    assign ready = ~wb_stall_i;
-    assign rsp_data = wb_dat_i;
+    assign req_ready = ~wb_stall_i;
+    assign rsp_rdata = wb_dat_i;
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -65,7 +68,7 @@ module vjtag2wb #(
         end
         else begin
             if (wb_ack_i) wb_cyc_hold <= 1'b0;
-            else if (wvalid | rvalid) wb_cyc_hold <= 1'b1;
+            else if (req_valid) wb_cyc_hold <= 1'b1;
 
             if (wb_cyc_o && wb_stb_o && !wb_stall_i && !wb_we_o) rsp_valid <= 1'b1;
             else rsp_valid <= 1'b0;
@@ -110,13 +113,13 @@ module vjtag2wb #(
         .clk        (clk),
         .rst_n      (rst_n),
         .rst_n_out  (rst_n_out),
-        .address    (address),
-        .wvalid     (wvalid),
-        .wdata      (wdata),
-        .ready      (ready),
-        .rvalid     (rvalid),
+        .req_valid  (req_valid),
+        .req_write  (req_write),
+        .req_addr   (req_addr),
+        .req_wdata  (req_wdata),
+        .req_ready  (req_ready),
         .rsp_valid  (rsp_valid),
-        .rsp_data   (rsp_data)
+        .rsp_rdata  (rsp_rdata)
     );
 
 endmodule
