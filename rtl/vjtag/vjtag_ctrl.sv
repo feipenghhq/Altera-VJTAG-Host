@@ -123,6 +123,7 @@ assign ir_out = ir_in;
 //              CLK domain
 // ------------------------------------
 
+// request should be flop version of update as ir/dr is updated after update is asserted
 always @(posedge clk) begin
     if (!rst_n) request <= 1'b0;
     else        request <= update;
@@ -138,9 +139,9 @@ always_comb begin
     state_next = state;
     case(state)
         IDLE: begin
-            if (request) begin
+            if (req_valid) begin
                 if (!req_ready) state_next = state_t'(REQ);
-                else if (is_read) state_next = state_t'(READ);
+                else if (!req_write) state_next = state_t'(READ);
             end
         end
         REQ: begin
@@ -156,11 +157,11 @@ end
 always_ff @(posedge clk) begin
     if (!rst_n) begin
         req_valid <= 1'b0;
-        req_write   <= 1'b0;
+        req_write <= 1'b0;
     end
     else begin
         req_valid <= 1'b0;
-        req_write   <= 1'b0;
+        req_write <= 1'b0;
         // Note: use next state here
         case(state_next)
             IDLE: begin
@@ -173,8 +174,8 @@ always_ff @(posedge clk) begin
             end
             READ: begin
                 if (state != READ) begin // entering READ state
-                    req_valid <= 1'b1;
-                    req_write   <= 1'b0;
+                    req_valid <= 1'b0;
+                    req_write <= 1'b0;
                 end
             end
         endcase

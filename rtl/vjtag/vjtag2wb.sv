@@ -35,8 +35,6 @@ module vjtag2wb #(
     input  logic                    wb_stall_i
 );
 
-    // FIXME:
-
     logic [7:0] ir_in, ir_out;
     logic       tck, tdi, tdo;
     logic       cdr, cir, e1dr, e2dr, pdr, sdr, udr, uir;
